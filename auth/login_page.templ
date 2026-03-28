@@ -1,0 +1,23 @@
+package auth
+
+import "github.com/osu-acm/acm-votes/pages"
+import "github.com/osu-acm/acm-votes/components/button"
+import "golang.org/x/oauth2"
+
+templ LoginPage(oa2 *oauth2.Config, state string, issue string) {
+	@pages.Template("Login") {
+		<div class="w-full h-screen flex flex-col justify-center items-center gap-5">
+			<h1 class="text-2xl font-bold">
+				<img src="/assets/acm-wordmark.png" class="inline h-[1.2em]"/> Votes
+			</h1>
+			@button.Button(button.Props{
+				Href: oa2.AuthCodeURL(state),
+			}) {
+				Continue with Google
+			}
+			if issue != "" {
+				<pre>{ issue }</pre>
+			}
+		</div>
+	}
+}

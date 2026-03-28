@@ -1,0 +1,77 @@
+package pages
+
+import "github.com/osu-acm/acm-votes/components/icon"
+import "github.com/osu-acm/acm-votes/components/button"
+
+templ BallotSlot(name string, id int) {
+	<li data-id={ id } data-name={ name } class="flex justify-between p-4 border bg-white">
+		{ name }
+		@icon.Menu()
+	</li>
+}
+
+templ VotingPage(ballot string, people []string) {
+	@Template("Vote - " + ballot) {
+		<style>
+		.sortable-drag { opacity: 0; }
+		.sortable-ghost { opacity: 1; }
+		</style>
+		<div class="hidden" id="icon-save">
+			@icon.Menu()
+		</div>
+		<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+		<div class="flex flex-col items-center w-full">
+			<div class="w-full lg:max-w-[40em]">
+				<div class="p-4">
+					<h1 class="text-3xl">{ ballot }</h1>
+					<p>Please rank your preference(s) for { ballot }</p>
+				</div>
+				<ol id="ranking" class="list-decimal list-inside">
+					for i, name := range people {
+						@BallotSlot(name, i)
+					}
+				</ol>
+				<div class="w-full flex justify-center p-4">
+					<div id="rank-inputs" class="hidden"></div>
+					@button.Button(button.Props{
+						Class: "text-md",
+					}) {
+						Submit Vote
+					}
+				</div>
+			</div>
+		</div>
+		<script>
+			const list = document.getElementById('ranking');
+			const icon = document.getElementById('icon-save').children[0];
+			const inputContainer = document.getElementById('rank-inputs');
+
+			function updateRankInputs() {
+				inputContainer.innerHTML = '';
+				[...list.children].forEach((item, index) => {
+						const input = document.createElement('input');
+						input.type = 'hidden';
+						input.name = 'rank[]';
+						input.value = item.dataset.id;
+						inputContainer.appendChild(input);
+
+						//item.innerText = `${(index+1)}. ${item.dataset.name}`;
+					});
+			}
+
+			function updateRankNumbers() {
+				[...list.children].forEach((item, index) => {
+						item.innerHTML = `${(index+1)}. ${item.dataset.name}` + icon.outerHTML;
+				});
+			}
+
+			Sortable.create(list, {
+				animation: 150,
+				onEnd: updateRankInputs,
+				onChange: updateRankNumbers,
+			});
+			updateRankInputs();
+			updateRankNumbers();
+		</script>
+	}
+}

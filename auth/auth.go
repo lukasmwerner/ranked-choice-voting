@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/osu-acm/acm-votes/database"
@@ -33,7 +34,7 @@ func MustBeAuthenticated(db *sql.DB, next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sessionCookie, err := r.Cookie(SessionCookie)
 		if err != nil {
-			http.Error(w, "Cookie access error", http.StatusBadRequest)
+			http.Redirect(w, r, "/login?source="+url.QueryEscape(r.URL.Path), http.StatusTemporaryRedirect)
 			return
 		}
 		id := sessionCookie.Value
@@ -60,9 +61,12 @@ func Reject(w http.ResponseWriter, ctx context.Context, code int, reason string,
 
 func CallbackHandler(db *sql.DB, oa2 *oauth2.Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		stateCookie, err := r.Cookie("oauth_state")
+		destination, err := GetRedirectCookie(r)
+		if err != nil {
+			destination = "/"
+		}
 
-		destination := "/"
+		stateCookie, err := r.Cookie("oauth_state")
 
 		if err != nil || stateCookie.Value != r.URL.Query().Get("state") {
 			Reject(w, r.Context(), http.StatusBadRequest, "Mismatched state", oa2)
@@ -98,17 +102,6 @@ func CallbackHandler(db *sql.DB, oa2 *oauth2.Config) http.Handler {
 			Path:     "/",
 		})
 
-		http.SetCookie(w, &http.Cookie{
-			Name:   "oauth_state",
-			Value:  "",
-			MaxAge: -1,
-		})
-		http.SetCookie(w, &http.Cookie{
-			Name:   "redirect_on_completion",
-			Value:  "",
-			MaxAge: -1,
-		})
-
 		http.Redirect(w, r, destination, http.StatusTemporaryRedirect)
 
 	})
@@ -116,20 +109,48 @@ func CallbackHandler(db *sql.DB, oa2 *oauth2.Config) http.Handler {
 }
 
 func SetAuthCookie(w http.ResponseWriter, state string, duration time.Duration) {
+	ClearAuthCookie(w)
 	http.SetCookie(w, &http.Cookie{
 		Name:     "oauth_state",
 		Value:    state,
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(duration.Seconds()),
 	})
 }
+func ClearAuthCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:   "oauth_state",
+		Value:  "",
+		MaxAge: -1,
+	})
+}
+
+func SetRedirectCookie(w http.ResponseWriter, destination string, duration time.Duration) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "oauth_source",
+		Value:    destination,
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   int(duration.Seconds()),
+	})
+}
+func GetRedirectCookie(r *http.Request) (string, error) {
+	cookie, err := r.Cookie("oauth_source")
+	if err != nil {
+		return "", err
+	}
+	return cookie.Value, nil
+}
 
 func IsAuthorizedUser(db *sql.DB, ctx context.Context, email string) bool {
 	queries := database.New(db)
 	ok, err := queries.UserExists(ctx, email)
 	if err != nil {
+		fmt.Println(err.Error())
 		return false
 	}
 	return ok == 1

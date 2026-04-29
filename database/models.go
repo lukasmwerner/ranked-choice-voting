@@ -33,9 +33,8 @@ type Session struct {
 }
 
 type User struct {
-	Email     string
-	FirstName string
-	LastName  string
+	Email string
+	Name  string
 }
 
 type Vote struct {

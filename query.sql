@@ -1,8 +1,8 @@
 -- name: AddUser :exec
 INSERT OR IGNORE INTO users (
-	email, first_name, last_name
+	email, name
 ) VALUES (
-	?, ?, ?
+	?, ?
 );
 
 -- name: UserExists :one

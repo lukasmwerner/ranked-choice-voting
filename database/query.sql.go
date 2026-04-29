@@ -41,20 +41,19 @@ func (q *Queries) AddCandidateToBallot(ctx context.Context, arg AddCandidateToBa
 
 const addUser = `-- name: AddUser :exec
 INSERT OR IGNORE INTO users (
-	email, first_name, last_name
+	email, name
 ) VALUES (
-	?, ?, ?
+	?, ?
 )
 `
 
 type AddUserParams struct {
-	Email     string
-	FirstName string
-	LastName  string
+	Email string
+	Name  string
 }
 
 func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) error {
-	_, err := q.db.ExecContext(ctx, addUser, arg.Email, arg.FirstName, arg.LastName)
+	_, err := q.db.ExecContext(ctx, addUser, arg.Email, arg.Name)
 	return err
 }
 

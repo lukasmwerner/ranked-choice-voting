@@ -2,6 +2,7 @@ package server
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -53,9 +54,14 @@ func Main() {
 		state := auth.GenerateRandomToken()
 
 		if cookie, err := r.Cookie("oauth_state"); err == nil && cookie.Value != "" {
+			fmt.Println("keeping cookie")
 			state = cookie.Value
 		} else {
 			auth.SetAuthCookie(w, state, time.Minute*10)
+		}
+
+		if r.URL.Query().Has("source") {
+			auth.SetRedirectCookie(w, r.URL.Query().Get("source"), time.Minute*10)
 		}
 
 		auth.LoginPage(oa2, state, "").Render(r.Context(), w)

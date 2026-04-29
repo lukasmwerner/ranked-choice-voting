@@ -16,6 +16,7 @@ import (
 func Main() {
 
 	db, err := sql.Open("sqlite3", "data/data.db")
+	defer db.Close()
 	if err != nil {
 		log.Println("error opening database", err.Error())
 		return
@@ -47,9 +48,8 @@ func Main() {
 		}
 		i += 1
 		err = queries.AddUser(context.Background(), database.AddUserParams{
-			FirstName: row[1],
-			LastName:  row[2],
-			Email:     row[3],
+			Name:  row[1],
+			Email: row[4],
 		})
 		if err != nil {
 			fmt.Printf("error %d saving to database: %s\n", i, err.Error())

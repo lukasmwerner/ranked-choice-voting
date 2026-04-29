@@ -1,9 +1,5 @@
 -- name: AddUser :exec
-INSERT OR IGNORE INTO users (
-	email, name
-) VALUES (
-	?, ?
-);
+INSERT OR IGNORE INTO users (email, name) VALUES (?, ?);
 
 -- name: UserExists :one
 SELECT 1 FROM users
@@ -29,6 +25,9 @@ expires_at < strftime('%s', 'now');
 -- name: AddCandidate :exec
 INSERT INTO candidates (id, name) VALUES (?, ?);
 
+-- name: GetCandidateName :one
+SELECT name FROM candidates WHERE id = ?;
+
 -- name: CreateBallot :exec
 INSERT INTO ballots (id, name, description) VALUES (?, ?, ?);
 
@@ -44,34 +43,51 @@ UPDATE ballots SET status = 'closed' WHERE id = ?;
 -- name: CompleteBallot :exec
 UPDATE ballots SET status = 'complete' WHERE id = ?;
 
--- name: EliminateCandidate :exec
-UPDATE ballot_candidates SET eliminated = TRUE WHERE candidate_id = ?;
+-- name: EliminateCandidateBallot :exec
+UPDATE ballot_candidates
+SET eliminated = TRUE
+WHERE ballot_id = ? AND candidate_id = ?;
 
--- name: CheckMajority :many
-WITH active_first_choice AS (
-    SELECT v.email, v.candidate_id, v.rank
-    FROM votes v
-    JOIN ballot_candidates bc
-        ON bc.ballot_id = v.ballot_id
-        AND bc.candidate_id = v.candidate_id
-    WHERE v.ballot_id = ?
-      AND bc.eliminated = FALSE
-      AND v.rank = (
-          -- find this voter's current effective first choice
-          SELECT MIN(v2.rank)
-          FROM votes v2
-          JOIN ballot_candidates bc2
-              ON bc2.ballot_id = v2.ballot_id
-              AND bc2.candidate_id = v2.candidate_id
-          WHERE v2.email = v.email
-            AND v2.ballot_id = v.ballot_id
-            AND bc2.eliminated = FALSE
-      )
-)
-SELECT candidate_id, COUNT(*) as vote_count
-FROM active_first_choice
-GROUP BY candidate_id
-ORDER BY vote_count DESC;
+-- name: EliminateCandidateGlobally :exec
+UPDATE ballot_candidates
+SET eliminated = TRUE
+WHERE candidate_id = ?;
 
---- name FindLoser :many
+-- name: CountRemaining :one
+SELECT COUNT(*) FROM ballot_candidates
+WHERE ballot_id = ? AND eliminated = FALSE;
 
+-- VOTING
+
+-- name: HasVoted :one
+SELECT EXISTS (SELECT 1 FROM votes WHERE email = ? AND ballot_id = ?) AS has_voted;
+
+-- name: DeleteVotes :exec
+DELETE FROM votes WHERE email = ? AND ballot_id = ?;
+
+-- name: InsertRankedVote :exec
+INSERT INTO votes (email, ballot_id, candidate_id, rank)
+VALUES (?, ?, ?, ?);
+
+-- name: GetBallotStatus :one
+SELECT status FROM ballots WHERE id = ?;
+
+-- name: GetBallotName :one
+SELECT name FROM ballots WHERE id = ?;
+
+-- name: GetLastCandidate :one
+SELECT candidate_id FROM ballot_candidates WHERE ballot_id = ? AND eliminated = FALSE LIMIT 1;
+
+-- name: GetBallotCandidates :many
+SELECT c.id, c.name
+FROM candidates c
+JOIN ballot_candidates bc ON bc.candidate_id = c.id
+WHERE bc.ballot_id = ? AND bc.eliminated = FALSE
+ORDER BY c.name;
+
+-- name: GetBallotWinner :one
+SELECT c.id, c.name
+FROM candidates c
+JOIN ballot_candidates bc ON bc.candidate_id = c.id
+WHERE bc.ballot_id = ? AND bc.eliminated = FALSE
+LIMIT 1;

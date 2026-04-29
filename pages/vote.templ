@@ -1,16 +1,19 @@
 package pages
 
-import "github.com/osu-acm/acm-votes/components/icon"
-import "github.com/osu-acm/acm-votes/components/button"
+import (
+	"github.com/osu-acm/acm-votes/components/button"
+	"github.com/osu-acm/acm-votes/components/icon"
+	"github.com/osu-acm/acm-votes/database"
+)
 
-templ BallotSlot(name string, id int) {
+templ BallotSlot(name string, id string) {
 	<li data-id={ id } data-name={ name } class="flex justify-between p-4 border bg-white">
 		{ name }
 		@icon.Menu()
 	</li>
 }
 
-templ VotingPage(ballot string, people []string) {
+templ VotingPage(ballot string, candidates []database.Candidate) {
 	@Template("Vote - " + ballot) {
 		<style>
 		.sortable-drag { opacity: 0; }
@@ -27,17 +30,20 @@ templ VotingPage(ballot string, people []string) {
 					<p>Please rank your preference(s) for { ballot }</p>
 				</div>
 				<ol id="ranking" class="list-decimal list-inside">
-					for i, name := range people {
-						@BallotSlot(name, i)
+					for _, person := range candidates {
+						@BallotSlot(person.Name, person.ID.(string))
 					}
 				</ol>
 				<div class="w-full flex justify-center p-4">
-					<div id="rank-inputs" class="hidden"></div>
-					@button.Button(button.Props{
-						Class: "text-md",
-					}) {
-						Submit Vote
-					}
+					<form method="POST">
+						<div id="rank-inputs" class="hidden"></div>
+						@button.Button(button.Props{
+							Class: "text-md",
+							Type:  button.TypeSubmit,
+						}) {
+							Submit Vote
+						}
+					</form>
 				</div>
 			</div>
 		</div>

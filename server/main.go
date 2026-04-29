@@ -9,10 +9,11 @@ import (
 	"time"
 
 	"github.com/a-h/templ"
-	"github.com/go-faker/faker/v4"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/osu-acm/acm-votes/auth"
+	"github.com/osu-acm/acm-votes/database"
 	"github.com/osu-acm/acm-votes/pages"
 	"github.com/templui/templui/assets"
 	"golang.org/x/oauth2"
@@ -37,18 +38,101 @@ func Main() {
 		log.Println("error opening database", err.Error())
 		return
 	}
+	queries := database.New(db)
 
 	http.Handle("/api/auth/callback/google", auth.CallbackHandler(db, oa2))
 	http.Handle("POST /vote/{ballot}", auth.MustBeAuthenticated(db, func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		ballotID, err := uuid.Parse(r.PathValue("ballot"))
+		if err != nil {
+			http.Error(w, "invalid ballot id", http.StatusBadRequest)
+			return
+		}
+
+		err = r.ParseForm()
+		if err != nil {
+			http.Error(w, "unable to read form", http.StatusBadRequest)
+			return
+		}
+		choices := r.PostForm["rank[]"]
+		voterID := auth.GetEmail(ctx)
+
+		status, err := queries.GetBallotStatus(ctx, ballotID)
+		if err != nil {
+			http.Error(w, "ballot not found", http.StatusNotFound)
+			return
+		}
+		if status != "open" {
+			http.Error(w, "ballot is not open", http.StatusForbidden)
+			return
+		}
+
+		tx, err := db.Begin()
+		if err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		qtx := queries.WithTx(tx)
+		if err := qtx.DeleteVotes(ctx, database.DeleteVotesParams{
+			Email:    voterID,
+			BallotID: ballotID,
+		}); err != nil {
+			tx.Rollback()
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		for rank, candidate := range choices {
+			candidateID, _ := uuid.Parse(candidate)
+			if err := qtx.InsertRankedVote(ctx, database.InsertRankedVoteParams{
+				Email:       voterID,
+				BallotID:    ballotID,
+				CandidateID: candidateID,
+				Rank:        int64(rank + 1),
+			}); err != nil {
+				tx.Rollback()
+				http.Error(w, "internal error", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		if err := tx.Commit(); err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+		name, _ := queries.GetBallotName(ctx, ballotID)
+		pages.VotingSuccess(name).Render(ctx, w)
 
 	}))
 	http.Handle("/vote/{ballot}", auth.MustBeAuthenticated(db, func(w http.ResponseWriter, r *http.Request) {
-		people := make([]string, 4)
-		for i := range 4 {
-			people[i] = faker.Name()
+
+		ctx := r.Context()
+		ballotID, err := uuid.Parse(r.PathValue("ballot"))
+		if err != nil {
+			http.Error(w, "invalid ballot id", http.StatusBadRequest)
+			return
 		}
 
-		pages.VotingPage("ACM President", people).Render(r.Context(), w)
+		status, err := queries.GetBallotStatus(ctx, ballotID)
+		if err != nil {
+			http.Error(w, "ballot not found", http.StatusNotFound)
+			return
+		}
+		if status != "open" {
+			http.Error(w, "ballot is not open", http.StatusForbidden)
+			return
+		}
+
+		candidates, err := queries.GetBallotCandidates(ctx, ballotID)
+		if err != nil {
+			http.Error(w, "internal error", http.StatusInternalServerError)
+			return
+		}
+		name, _ := queries.GetBallotName(ctx, ballotID)
+
+		pages.VotingPage(name, candidates).Render(r.Context(), w)
 	}))
 	setupAssetsRoutes(http.DefaultServeMux)
 	http.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {

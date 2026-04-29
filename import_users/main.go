@@ -16,11 +16,11 @@ import (
 func Main() {
 
 	db, err := sql.Open("sqlite3", "data/data.db")
-	defer db.Close()
 	if err != nil {
 		log.Println("error opening database", err.Error())
 		return
 	}
+	defer db.Close()
 
 	if len(os.Args) < 3 {
 		log.Fatalln("no user csv file passed")

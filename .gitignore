@@ -3,3 +3,4 @@
 *.csv
 **/*_templ.go
 data/
+Playbook.md

@@ -30,6 +30,38 @@ func GetEmail(ctx context.Context) string {
 	return ctx.Value(email_key).(string)
 }
 
+func MustBeSpecificUser(db *sql.DB, emails []string, next http.HandlerFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		sessionCookie, err := r.Cookie(SessionCookie)
+		if err != nil {
+			http.Redirect(w, r, "/login?source="+url.QueryEscape(r.URL.Path), http.StatusTemporaryRedirect)
+			return
+		}
+		id := sessionCookie.Value
+		email, err := GetSession(db, r.Context(), id)
+		if email == "" {
+			http.Error(w, "Not logged in properly", http.StatusForbidden)
+			return
+		}
+
+		found := false
+		for _, eml := range emails {
+			if eml == email {
+				found = true
+			}
+		}
+		if !found {
+			http.Error(w, "Not authorized", http.StatusForbidden)
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), email_key, email)
+
+		next.ServeHTTP(w, r.WithContext(ctx))
+
+	})
+}
+
 func MustBeAuthenticated(db *sql.DB, next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sessionCookie, err := r.Cookie(SessionCookie)

@@ -34,7 +34,7 @@ CREATE TABLE ballot_candidates (
 
 -- one row per ranking per voter per ballot
 CREATE TABLE votes (
-    email TEXT REFERENCES users(email),
+    email TEXT REFERENCES users(email) NOT NULL,
     ballot_id UUID REFERENCES ballots(id),
     candidate_id UUID REFERENCES candidates(id),
     rank INTEGER NOT NULL,  -- 1 = first choice, 2 = second, etc.

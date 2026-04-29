@@ -33,13 +33,13 @@ func MustBeAuthenticated(db *sql.DB, next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		sessionCookie, err := r.Cookie(SessionCookie)
 		if err != nil {
-			http.Error(w, "", http.StatusBadRequest)
+			http.Error(w, "Cookie access error", http.StatusBadRequest)
 			return
 		}
 		id := sessionCookie.Value
 		email, err := GetSession(db, r.Context(), id)
 		if email == "" {
-			http.Error(w, "", http.StatusForbidden)
+			http.Error(w, "Not logged in properly", http.StatusForbidden)
 			return
 		}
 

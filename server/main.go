@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/a-h/templ"
 	"github.com/go-faker/faker/v4"
 	"github.com/joho/godotenv"
 	_ "github.com/mattn/go-sqlite3"
@@ -73,6 +74,7 @@ func Main() {
 
 		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 	})
+	http.Handle("/", templ.Handler(pages.Landing()))
 	log.Println("Listening on :8080")
 	http.ListenAndServe(":8080", nil)
 }

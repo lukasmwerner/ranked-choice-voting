@@ -5,14 +5,25 @@
 package database
 
 import (
-	"github.com/google/uuid"
+	"database/sql"
 )
 
 type Ballot struct {
-	ID          uuid.UUID
+	ID          interface{}
 	Name        string
 	Description string
-	Options     []byte
+	Status      string
+}
+
+type BallotCandidate struct {
+	BallotID    interface{}
+	CandidateID interface{}
+	Eliminated  bool
+}
+
+type Candidate struct {
+	ID   interface{}
+	Name string
 }
 
 type Session struct {
@@ -28,8 +39,8 @@ type User struct {
 }
 
 type Vote struct {
-	ID     uuid.UUID
-	Email  string
-	Ballot uuid.UUID
-	Vote   string
+	Email       sql.NullString
+	BallotID    interface{}
+	CandidateID interface{}
+	Rank        int64
 }

@@ -7,9 +7,37 @@ package database
 
 import (
 	"context"
-
-	"github.com/google/uuid"
 )
+
+const addCandidate = `-- name: AddCandidate :exec
+
+INSERT INTO candidates (id, name) VALUES (?, ?)
+`
+
+type AddCandidateParams struct {
+	ID   interface{}
+	Name string
+}
+
+// BALLOT SETUP
+func (q *Queries) AddCandidate(ctx context.Context, arg AddCandidateParams) error {
+	_, err := q.db.ExecContext(ctx, addCandidate, arg.ID, arg.Name)
+	return err
+}
+
+const addCandidateToBallot = `-- name: AddCandidateToBallot :exec
+INSERT INTO ballot_candidates (ballot_id, candidate_id) VALUES (?, ?)
+`
+
+type AddCandidateToBallotParams struct {
+	BallotID    interface{}
+	CandidateID interface{}
+}
+
+func (q *Queries) AddCandidateToBallot(ctx context.Context, arg AddCandidateToBallotParams) error {
+	_, err := q.db.ExecContext(ctx, addCandidateToBallot, arg.BallotID, arg.CandidateID)
+	return err
+}
 
 const addUser = `-- name: AddUser :exec
 INSERT OR IGNORE INTO users (
@@ -30,6 +58,61 @@ func (q *Queries) AddUser(ctx context.Context, arg AddUserParams) error {
 	return err
 }
 
+const checkMajority = `-- name: CheckMajority :many
+WITH active_first_choice AS (
+    SELECT v.email, v.candidate_id, v.rank
+    FROM votes v
+    JOIN ballot_candidates bc
+        ON bc.ballot_id = v.ballot_id
+        AND bc.candidate_id = v.candidate_id
+    WHERE v.ballot_id = ?
+      AND bc.eliminated = FALSE
+      AND v.rank = (
+          -- find this voter's current effective first choice
+          SELECT MIN(v2.rank)
+          FROM votes v2
+          JOIN ballot_candidates bc2
+              ON bc2.ballot_id = v2.ballot_id
+              AND bc2.candidate_id = v2.candidate_id
+          WHERE v2.email = v.email
+            AND v2.ballot_id = v.ballot_id
+            AND bc2.eliminated = FALSE
+      )
+)
+SELECT candidate_id, COUNT(*) as vote_count
+FROM active_first_choice
+GROUP BY candidate_id
+ORDER BY vote_count DESC
+`
+
+type CheckMajorityRow struct {
+	CandidateID interface{}
+	VoteCount   int64
+}
+
+func (q *Queries) CheckMajority(ctx context.Context, ballotID interface{}) ([]CheckMajorityRow, error) {
+	rows, err := q.db.QueryContext(ctx, checkMajority, ballotID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CheckMajorityRow
+	for rows.Next() {
+		var i CheckMajorityRow
+		if err := rows.Scan(&i.CandidateID, &i.VoteCount); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const cleanSessions = `-- name: CleanSessions :exec
 DELETE FROM sessions WHERE
 expires_at < strftime('%s', 'now')
@@ -40,28 +123,36 @@ func (q *Queries) CleanSessions(ctx context.Context) error {
 	return err
 }
 
+const closeBallot = `-- name: CloseBallot :exec
+UPDATE ballots SET status = 'closed' WHERE id = ?
+`
+
+func (q *Queries) CloseBallot(ctx context.Context, id interface{}) error {
+	_, err := q.db.ExecContext(ctx, closeBallot, id)
+	return err
+}
+
+const completeBallot = `-- name: CompleteBallot :exec
+UPDATE ballots SET status = 'complete' WHERE id = ?
+`
+
+func (q *Queries) CompleteBallot(ctx context.Context, id interface{}) error {
+	_, err := q.db.ExecContext(ctx, completeBallot, id)
+	return err
+}
+
 const createBallot = `-- name: CreateBallot :exec
-INSERT INTO ballots (
-	id, name, description, options
-) VALUES (
-	?, ?, ?, JSONB(?)
-)
+INSERT INTO ballots (id, name, description) VALUES (?, ?, ?)
 `
 
 type CreateBallotParams struct {
-	ID          uuid.UUID
+	ID          interface{}
 	Name        string
 	Description string
-	Jsonb       interface{}
 }
 
 func (q *Queries) CreateBallot(ctx context.Context, arg CreateBallotParams) error {
-	_, err := q.db.ExecContext(ctx, createBallot,
-		arg.ID,
-		arg.Name,
-		arg.Description,
-		arg.Jsonb,
-	)
+	_, err := q.db.ExecContext(ctx, createBallot, arg.ID, arg.Name, arg.Description)
 	return err
 }
 
@@ -82,37 +173,13 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) er
 	return err
 }
 
-const getBallotVotes = `-- name: GetBallotVotes :many
-SELECT id, email, ballot, vote FROM votes
-WHERE ballot = ?
+const eliminateCandidate = `-- name: EliminateCandidate :exec
+UPDATE ballot_candidates SET eliminated = TRUE WHERE candidate_id = ?
 `
 
-func (q *Queries) GetBallotVotes(ctx context.Context, ballot uuid.UUID) ([]Vote, error) {
-	rows, err := q.db.QueryContext(ctx, getBallotVotes, ballot)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []Vote
-	for rows.Next() {
-		var i Vote
-		if err := rows.Scan(
-			&i.ID,
-			&i.Email,
-			&i.Ballot,
-			&i.Vote,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) EliminateCandidate(ctx context.Context, candidateID interface{}) error {
+	_, err := q.db.ExecContext(ctx, eliminateCandidate, candidateID)
+	return err
 }
 
 const getSession = `-- name: GetSession :one
@@ -129,37 +196,13 @@ func (q *Queries) GetSession(ctx context.Context, id string) (string, error) {
 	return user, err
 }
 
-const submitVote = `-- name: SubmitVote :one
-INSERT INTO votes (
-	id, email,
-	ballot, vote
-) VALUES (
-	?, ?, ?, ?
-) RETURNING id, email, ballot, vote
+const openBallot = `-- name: OpenBallot :exec
+UPDATE ballots SET status = 'open' WHERE id = ?
 `
 
-type SubmitVoteParams struct {
-	ID     uuid.UUID
-	Email  string
-	Ballot uuid.UUID
-	Vote   string
-}
-
-func (q *Queries) SubmitVote(ctx context.Context, arg SubmitVoteParams) (Vote, error) {
-	row := q.db.QueryRowContext(ctx, submitVote,
-		arg.ID,
-		arg.Email,
-		arg.Ballot,
-		arg.Vote,
-	)
-	var i Vote
-	err := row.Scan(
-		&i.ID,
-		&i.Email,
-		&i.Ballot,
-		&i.Vote,
-	)
-	return i, err
+func (q *Queries) OpenBallot(ctx context.Context, id interface{}) error {
+	_, err := q.db.ExecContext(ctx, openBallot, id)
+	return err
 }
 
 const userExists = `-- name: UserExists :one

@@ -36,6 +36,8 @@ func Main() {
 		{uuid.New(), "Cal (Caelynn) Corcoran"}, // 7
 		{uuid.New(), "Isaac Tucknott"},         // 8
 		{uuid.New(), "Krishna Basavaraju"},     // 9
+		{uuid.New(), "Jakhangir Tynshimov"},    // 10
+
 	}
 
 	for _, c := range candidates {
@@ -64,7 +66,7 @@ func Main() {
 			id:          uuid.New(),
 			name:        "Vice-President",
 			description: "",
-			candidates:  []uuid.UUID{candidates[1].id},
+			candidates:  []uuid.UUID{candidates[1].id, candidates[10].id},
 		},
 		{
 			id:          uuid.New(),
@@ -76,13 +78,13 @@ func Main() {
 			id:          uuid.New(),
 			name:        "Head Competitive Officer",
 			description: "",
-			candidates:  []uuid.UUID{},
+			candidates:  []uuid.UUID{candidates[4].id},
 		},
 		{
 			id:          uuid.New(),
 			name:        "Career Officer",
 			description: "",
-			candidates:  []uuid.UUID{candidates[2].id, candidates[5].id},
+			candidates:  []uuid.UUID{candidates[5].id},
 		},
 		{
 			id:          uuid.New(),
@@ -100,7 +102,7 @@ func Main() {
 			id:          uuid.New(),
 			name:        "Community Outreach Officer",
 			description: "",
-			candidates:  []uuid.UUID{candidates[1].id, candidates[3].id},
+			candidates:  []uuid.UUID{candidates[1].id, candidates[3].id, candidates[10].id},
 		},
 		{
 			id:          uuid.New(),

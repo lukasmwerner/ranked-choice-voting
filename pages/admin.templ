@@ -1,0 +1,121 @@
+package pages
+
+import "github.com/osu-acm/acm-votes/database"
+import "github.com/osu-acm/acm-votes/components/button"
+
+templ AdminPage(msg string, ballots []database.Ballot, candidates []database.Candidate) {
+	@Template("ACM Votes - Admin") {
+		<div class="grid grid-cols-3 p-4">
+			<!-- Create Ballot -->
+			<div class="border-2 rounded-xl m-2 p-2 min-w-min">
+				<form class="flex flex-col gap-4">
+					<h1 class="text-2xl">Create Ballot</h1>
+					<input class="p-2" type="text" id="name" name="name" placeholder="Ballot Name..."/>
+					<input class="p-2" type="text" id="description" name="description" placeholder="Description..."/>
+					@button.Button(button.Props{
+						Type: button.TypeSubmit,
+					}) {
+						Create Ballot
+					}
+				</form>
+			</div>
+			<!-- Create Entry -->
+			<div class="border-2 rounded-xl m-2 p-2 min-w-min">
+				<form class="flex flex-col gap-4">
+					<h1 class="text-2xl">Create Entry</h1>
+					<input class="p-2" type="text" id="name" name="name" placeholder="Name..."/>
+					@button.Button(button.Props{
+						Type: button.TypeSubmit,
+					}) {
+						Create Entry
+					}
+				</form>
+			</div>
+			<!-- Add Entry to Ballot -->
+			<div class="border-2 rounded-xl m-2 p-2 min-w-min">
+				<form class="flex flex-col gap-4">
+					<h1 class="text-2xl">Add Entry to Ballot</h1>
+					<select id="ballot" class="p-2" name="ballot">
+						<option>Select Ballot</option>
+						for _, ballot := range ballots {
+							<option value={ ballot.ID.(string) }>{ ballot.Name }</option>
+						}
+					</select>
+					<select id="entry" class="p-2" name="entry">
+						<option>Select Entry</option>
+						for _, candidate := range candidates {
+							<option value={ candidate.ID.(string) }>{ candidate.Name }</option>
+						}
+					</select>
+					@button.Button(button.Props{
+						Type: button.TypeSubmit,
+					}) {
+						Add to Ballot
+					}
+				</form>
+			</div>
+			<!-- Change Ballot Status -->
+			<div class="border-2 rounded-xl m-2 p-2 min-w-min">
+				<form class="flex flex-col gap-4" method="POST" action="/admin/ballot/change">
+					<h1 class="text-2xl">Update Ballot Status</h1>
+					<select id="status" class="p-2" name="status">
+						<option value="open">Open</option>
+						<option value="closed">Close</option>
+					</select>
+					<select id="ballot" class="p-2" name="ballot">
+						<option>Select Ballot</option>
+						for _, ballot := range ballots {
+							<option value={ ballot.ID.(string) }>{ ballot.Name }</option>
+						}
+					</select>
+					@button.Button(button.Props{
+						Variant: button.VariantDestructive,
+						Type:    button.TypeSubmit,
+					}) {
+						Update Ballot
+					}
+				</form>
+			</div>
+			<!-- Tally Component -->
+			<div class="border-2 rounded-xl m-2 p-2 min-w-min">
+				<form class="flex flex-col gap-4" method="POST" action="/admin/ballot/tally">
+					<h1 class="text-2xl">Tally Ballot</h1>
+					<select id="ballot" class="p-2">
+						<option>Select Ballot</option>
+						for _, ballot := range ballots {
+							<option value={ ballot.ID.(string) }>{ ballot.Name }</option>
+						}
+					</select>
+					@button.Button(button.Props{
+						Variant: button.VariantDestructive,
+						Type:    button.TypeSubmit,
+					}) {
+						Run Tally
+					}
+				</form>
+			</div>
+			<!-- QR Component -->
+			<div class="border-2 rounded-xl m-2 p-2 min-w-min">
+				<div class="flex flex-col gap-4">
+					<h1 class="text-2xl">Copy Ballot Link</h1>
+					<select id="selBallot" class="p-2">
+						<option>Select Ballot</option>
+						for _, ballot := range ballots {
+							<option value={ ballot.ID.(string) }>{ ballot.Name }</option>
+						}
+					</select>
+					@button.Button(button.Props{
+						ID: "copyLinkBtn",
+					}) {
+						Copy Ballot
+					}
+					<script>
+					document.querySelector("#copyLinkBtn").addEventListener('click', () => {
+						navigator.clipboard.writeText(`https://acm-votes.pdx.land/vote/${document.querySelector("#selBallot").value}`);
+					})
+					</script>
+				</div>
+			</div>
+		</div>
+	}
+}

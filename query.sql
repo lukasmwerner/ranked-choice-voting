@@ -85,9 +85,8 @@ JOIN ballot_candidates bc ON bc.candidate_id = c.id
 WHERE bc.ballot_id = ? AND bc.eliminated = FALSE
 ORDER BY c.name;
 
--- name: GetBallotWinner :one
-SELECT c.id, c.name
-FROM candidates c
-JOIN ballot_candidates bc ON bc.candidate_id = c.id
-WHERE bc.ballot_id = ? AND bc.eliminated = FALSE
-LIMIT 1;
+-- name: GetAllBallots :many
+SELECT id, name, description, status FROM ballots;
+
+-- name: GetAllCandidates :many
+SELECT id, name FROM candidates;

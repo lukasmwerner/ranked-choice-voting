@@ -15,6 +15,7 @@ import (
 	"github.com/osu-acm/acm-votes/auth"
 	"github.com/osu-acm/acm-votes/database"
 	"github.com/osu-acm/acm-votes/pages"
+	rankedchoice "github.com/osu-acm/acm-votes/ranked_choice"
 	"github.com/templui/templui/assets"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/endpoints"
@@ -39,6 +40,73 @@ func Main() {
 		return
 	}
 	queries := database.New(db)
+	admins := []string{"wernerlu@oregonstate.edu"}
+
+	http.Handle("/admin", auth.MustBeSpecificUser(db, admins, func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
+		ballots, err := queries.GetAllBallots(ctx)
+		if err != nil {
+			http.Error(w, "internal server error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		candidates, err := queries.GetAllCandidates(ctx)
+		if err != nil {
+			http.Error(w, "internal server error: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		pages.AdminPage("", ballots, candidates).Render(ctx, w)
+	}))
+
+	http.Handle("POST /admin/ballot/tally", auth.MustBeSpecificUser(db, admins, func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		r.ParseForm()
+		ballot := r.Form.Get("ballot")
+		ballotID, err := uuid.Parse(ballot)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		winner, err := rankedchoice.RunBallot(db, ballotID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		name, err := queries.GetCandidateName(ctx, winner)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("err: %s id: %s", err.Error(), winner.String()), http.StatusInternalServerError)
+			return
+		}
+		ballotName, _ := queries.GetBallotName(ctx, ballotID)
+
+		fmt.Fprintf(w, "Winner of %s: %s", ballotName, name)
+
+	}))
+	http.Handle("POST /admin/ballot/change", auth.MustBeSpecificUser(db, admins, func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+		r.ParseForm()
+		status := r.Form.Get("status")
+		ballot := r.Form.Get("ballot")
+		ballotID, err := uuid.Parse(ballot)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		switch status {
+		case "open":
+			queries.OpenBallot(ctx, ballotID)
+		case "close":
+			queries.CloseBallot(ctx, ballotID)
+		default:
+			http.Error(w, "invalid request", http.StatusBadRequest)
+		}
+
+		http.Redirect(w, r, "/admin", http.StatusSeeOther)
+
+	}))
 
 	http.Handle("/api/auth/callback/google", auth.CallbackHandler(db, oa2))
 	http.Handle("POST /vote/{ballot}", auth.MustBeAuthenticated(db, func(w http.ResponseWriter, r *http.Request) {

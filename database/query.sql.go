@@ -168,6 +168,65 @@ func (q *Queries) EliminateCandidateGlobally(ctx context.Context, candidateID uu
 	return err
 }
 
+const getAllBallots = `-- name: GetAllBallots :many
+SELECT id, name, description, status FROM ballots
+`
+
+func (q *Queries) GetAllBallots(ctx context.Context) ([]Ballot, error) {
+	rows, err := q.db.QueryContext(ctx, getAllBallots)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Ballot
+	for rows.Next() {
+		var i Ballot
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Status,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getAllCandidates = `-- name: GetAllCandidates :many
+SELECT id, name FROM candidates
+`
+
+func (q *Queries) GetAllCandidates(ctx context.Context) ([]Candidate, error) {
+	rows, err := q.db.QueryContext(ctx, getAllCandidates)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Candidate
+	for rows.Next() {
+		var i Candidate
+		if err := rows.Scan(&i.ID, &i.Name); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getBallotCandidates = `-- name: GetBallotCandidates :many
 SELECT c.id, c.name
 FROM candidates c
@@ -219,21 +278,6 @@ func (q *Queries) GetBallotStatus(ctx context.Context, id interface{}) (string, 
 	var status string
 	err := row.Scan(&status)
 	return status, err
-}
-
-const getBallotWinner = `-- name: GetBallotWinner :one
-SELECT c.id, c.name
-FROM candidates c
-JOIN ballot_candidates bc ON bc.candidate_id = c.id
-WHERE bc.ballot_id = ? AND bc.eliminated = FALSE
-LIMIT 1
-`
-
-func (q *Queries) GetBallotWinner(ctx context.Context, ballotID uuid.UUID) (Candidate, error) {
-	row := q.db.QueryRowContext(ctx, getBallotWinner, ballotID)
-	var i Candidate
-	err := row.Scan(&i.ID, &i.Name)
-	return i, err
 }
 
 const getCandidateName = `-- name: GetCandidateName :one

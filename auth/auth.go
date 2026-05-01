@@ -107,6 +107,7 @@ func CallbackHandler(db *sql.DB, oa2 *oauth2.Config) http.Handler {
 
 		tok, err := oa2.Exchange(r.Context(), r.URL.Query().Get("code"))
 		if err != nil {
+			fmt.Println(err.Error())
 			Reject(w, r.Context(), http.StatusInternalServerError, "Failed to exchange token", oa2)
 			return
 		}

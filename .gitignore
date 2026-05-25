@@ -4,3 +4,4 @@
 **/*_templ.go
 data/
 Playbook.md
+release.lua

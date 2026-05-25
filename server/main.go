@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/a-h/templ"
@@ -32,7 +33,8 @@ func Main() {
 	oa2.Scopes = []string{"https://www.googleapis.com/auth/userinfo.email"}
 	oa2.ClientID = os.Getenv("GOOGLE_KEY")
 	oa2.ClientSecret = os.Getenv("GOOGLE_SECRET")
-	oa2.RedirectURL = "https://acm-votes.pdx.land/api/auth/callback/google"
+	oa2.RedirectURL = "https://polling.pdx.land/api/auth/callback/google"
+	//oa2.RedirectURL = "http://localhost:8080/api/auth/callback/google"
 
 	db, err := sql.Open("sqlite3", "data/data.db")
 	if err != nil {
@@ -40,7 +42,7 @@ func Main() {
 		return
 	}
 	queries := database.New(db)
-	admins := []string{"wernerlu@oregonstate.edu"}
+	admins := strings.Split(os.Getenv("ADMINS"), ",")
 
 	http.Handle("/admin", auth.MustBeSpecificUser(db, admins, func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()

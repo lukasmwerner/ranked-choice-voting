@@ -111,7 +111,7 @@ templ AdminPage(msg string, ballots []database.Ballot, candidates []database.Can
 					}
 					<script>
 					document.querySelector("#copyLinkBtn").addEventListener('click', () => {
-						navigator.clipboard.writeText(`https://acm-votes.pdx.land/vote/${document.querySelector("#selBallot").value}`);
+						navigator.clipboard.writeText(`https://polling.pdx.land/vote/${document.querySelector("#selBallot").value}`);
 					})
 					</script>
 				</div>

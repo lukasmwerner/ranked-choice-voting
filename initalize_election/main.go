@@ -26,17 +26,18 @@ func Main() {
 		id   uuid.UUID
 		name string
 	}{
-		{uuid.New(), "Lukas Werner"},           // 0
-		{uuid.New(), "Avabella Schroeder"},     // 1
-		{uuid.New(), "Trenston Ricks"},         // 2
-		{uuid.New(), "Jacob Weiner"},           // 3
-		{uuid.New(), "William Tu"},             // 4
-		{uuid.New(), "Mehul Munankarmi"},       // 5
-		{uuid.New(), "Leonidas Sallos"},        // 6
-		{uuid.New(), "Cal (Caelynn) Corcoran"}, // 7
-		{uuid.New(), "Isaac Tucknott"},         // 8
-		{uuid.New(), "Krishna Basavaraju"},     // 9
-		{uuid.New(), "Jakhangir Tynshimov"},    // 10
+		{uuid.New(), "'Just For Fun' By Linus Torvalds & David Diamond"},                    // 0
+		{uuid.New(), "'The Adventure of Tom Sawyer' by Mark Twain"},                         // 1
+		{uuid.New(), "'A Year in Provionence' by Peter Male"},                               // 2
+		{uuid.New(), "'The Idea Factory' by John Gertner"},                                  // 3
+		{uuid.New(), "'Stoner' by John Williams"},                                           // 4
+		{uuid.New(), "'The Count of Monte Cristo'"},                                         // 5
+		{uuid.New(), "'Degrees of Freedom of Robotics and Social Justice' by Tom Williams"}, // 6
+		{uuid.New(), "'How to Make a Hat Out of Dried Cucumber'"},                           // 7
+		{uuid.New(), "'Educated' by Tara Westover"},                                         // 8
+		{uuid.New(), "'A Psalm for the Wild Built' by Becky Chambers"},                      // 9
+		{uuid.New(), "'Carless People' by Sarah Wynn-Williams"},                             // 10
+		{uuid.New(), "'Is a River Alive?' by Robert Macfarlane"},                            // 11
 
 	}
 
@@ -58,57 +59,22 @@ func Main() {
 	}{
 		{
 			id:          uuid.New(),
-			name:        "President",
+			name:        "Book Club Meeting",
 			description: "",
-			candidates:  []uuid.UUID{candidates[0].id, candidates[2].id},
-		},
-		{
-			id:          uuid.New(),
-			name:        "Vice-President",
-			description: "",
-			candidates:  []uuid.UUID{candidates[1].id, candidates[10].id},
-		},
-		{
-			id:          uuid.New(),
-			name:        "Treasurer",
-			description: "",
-			candidates:  []uuid.UUID{candidates[3].id, candidates[7].id, candidates[9].id},
-		},
-		{
-			id:          uuid.New(),
-			name:        "Head Competitive Officer",
-			description: "",
-			candidates:  []uuid.UUID{candidates[4].id},
-		},
-		{
-			id:          uuid.New(),
-			name:        "Career Officer",
-			description: "",
-			candidates:  []uuid.UUID{candidates[5].id},
-		},
-		{
-			id:          uuid.New(),
-			name:        "Competitive Officer",
-			description: "",
-			candidates:  []uuid.UUID{candidates[4].id, candidates[8].id},
-		},
-		{
-			id:          uuid.New(),
-			name:        "Graphic Design Officer",
-			description: "",
-			candidates:  []uuid.UUID{candidates[7].id, candidates[9].id},
-		},
-		{
-			id:          uuid.New(),
-			name:        "Community Outreach Officer",
-			description: "",
-			candidates:  []uuid.UUID{candidates[1].id, candidates[3].id, candidates[10].id},
-		},
-		{
-			id:          uuid.New(),
-			name:        "Online Officer",
-			description: "",
-			candidates:  []uuid.UUID{candidates[6].id},
+			candidates: []uuid.UUID{
+				candidates[0].id,
+				candidates[1].id,
+				candidates[2].id,
+				candidates[3].id,
+				candidates[4].id,
+				candidates[5].id,
+				candidates[6].id,
+				candidates[7].id,
+				candidates[8].id,
+				candidates[9].id,
+				candidates[10].id,
+				candidates[11].id,
+			},
 		},
 	}
 

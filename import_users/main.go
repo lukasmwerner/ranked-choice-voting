@@ -48,8 +48,8 @@ func Main() {
 		}
 		i += 1
 		err = queries.AddUser(context.Background(), database.AddUserParams{
-			Name:  row[1],
-			Email: row[4],
+			Name:  row[0],
+			Email: row[1],
 		})
 		if err != nil {
 			fmt.Printf("error %d saving to database: %s\n", i, err.Error())

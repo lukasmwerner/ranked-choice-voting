@@ -120,7 +120,7 @@ func CallbackHandler(db *sql.DB, oa2 *oauth2.Config) http.Handler {
 
 		authorized := IsAuthorizedUser(db, r.Context(), email)
 		if !authorized {
-			Reject(w, r.Context(), http.StatusUnauthorized, fmt.Sprintf("%s unauthorized. Please use university email.", email), oa2)
+			Reject(w, r.Context(), http.StatusUnauthorized, fmt.Sprintf("%s unauthorized. Please use an authorized email.", email), oa2)
 			return
 		}
 
